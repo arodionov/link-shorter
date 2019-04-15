@@ -1,8 +1,12 @@
 package shorter;
 
+import shorter.model.Link;
+import shorter.service.DefaultShortenLinkService;
+import shorter.service.ShortenLinkService;
+
 import java.util.Optional;
 
-import static shorter.Link.linkTo;
+import static shorter.model.Link.linkTo;
 
 public class ShorterApp {
 

@@ -1,8 +1,12 @@
-package shorter;
+package shorter.service;
+
+import shorter.model.Link;
+import shorter.repository.InMemShortLinksRepo;
+import shorter.repository.ShortLinksRepo;
 
 import java.util.Optional;
 
-import static shorter.Link.HTTPLinkTo;
+import static shorter.model.Link.HTTPLinkTo;
 
 public class DefaultShortenLinkService implements ShortenLinkService {
 

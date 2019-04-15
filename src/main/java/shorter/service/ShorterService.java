@@ -1,4 +1,4 @@
-package shorter;
+package shorter.service;
 
 public interface ShorterService {
 
