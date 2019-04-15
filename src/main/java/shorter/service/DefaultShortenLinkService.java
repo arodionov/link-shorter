@@ -10,8 +10,13 @@ import static shorter.model.Link.HTTPLinkTo;
 
 public class DefaultShortenLinkService implements ShortenLinkService {
 
-	private final ShortLinksRepo shortLinksRepo = new InMemShortLinksRepo();
-	private final ShorterService shorterService = new IdentShorterService();
+	private final ShortLinksRepo shortLinksRepo;
+	private final ShorterService shorterService;
+
+	public DefaultShortenLinkService(final ShortLinksRepo shortLinksRepo, final ShorterService shorterService) {
+		this.shortLinksRepo = shortLinksRepo;
+		this.shorterService = shorterService;
+	}
 
 	@Override
 	public Link shortLink(Link fullLink) {
