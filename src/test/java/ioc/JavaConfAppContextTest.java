@@ -2,6 +2,7 @@ package ioc;
 
 import org.junit.Test;
 import shorter.service.IdentShorterService;
+import shorter.service.ShorterService;
 
 import java.util.Map;
 
@@ -38,4 +39,13 @@ public class JavaConfAppContextTest {
         BeanDefinition definition = context.getBeanDefinition("shorterService");
         assertNotNull(definition);
     }
+
+    @Test
+    public void getBeanWithoutDeps() {
+        Map<String, Class<?>> config = Map.of("shorterService", IdentShorterService.class);
+        BeanFactory context = new JavaConfAppContext(config);
+        ShorterService shorterService = context.getBean("shorterService");
+        assertNotNull(shorterService);
+    }
+
 }
