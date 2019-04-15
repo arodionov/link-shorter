@@ -1,6 +1,8 @@
-package shorter;
+package shorter.service;
 
 import java.util.Optional;
+
+import shorter.model.Link;
 
 public interface ShortenLinkService {
 
