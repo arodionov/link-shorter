@@ -1,6 +1,8 @@
 package ioc;
 
 import org.junit.Test;
+import shorter.repo.InMemShortLinksRepo;
+import shorter.service.DefaultShortenLinkService;
 import shorter.service.IdentShorterService;
 
 import java.util.Map;
@@ -46,5 +48,15 @@ public class JavaConfAppContextTest {
         assertSame(context.getBean("shorterService"), context.getBean("shorterService"));
     }
 
+    @Test
+    public void getBeanShouldReturnBeanDependentOnOtherBeans() {
+        Map<String, Class<?>> beanDefinitions = Map.of(
+                "shortLinksRepo", InMemShortLinksRepo.class,
+                "shorterService", IdentShorterService.class,
+                "shortenLinkService", DefaultShortenLinkService.class);
+        BeanFactory context = new JavaConfAppContext(beanDefinitions);
+
+        assertNotNull(context.getBean("shortenLinkService"));
+    }
 
 }
