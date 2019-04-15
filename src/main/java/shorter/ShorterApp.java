@@ -21,9 +21,6 @@ public class ShorterApp {
     public static void main(String[] args) {
         String url = "https://www.facebook.com/groups/KyivKUG/";
 
-        /*`ShortLinksRepo inMemShortLinksRepo = new InMemShortLinksRepo();
-        ShorterService shorterService = new IdentShorterService();
-        */
         Map<String, Class<?>> config = new HashMap<>() {{
             put("shorterService", IdentShorterService.class);
             put("linksRepo", InMemShortLinksRepo.class);
