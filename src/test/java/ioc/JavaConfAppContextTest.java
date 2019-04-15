@@ -6,8 +6,7 @@ import shorter.service.ShorterService;
 
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.*;
 
 public class JavaConfAppContextTest {
 
@@ -44,8 +43,9 @@ public class JavaConfAppContextTest {
     public void getBeanWithoutDeps() {
         Map<String, Class<?>> config = Map.of("shorterService", IdentShorterService.class);
         BeanFactory context = new JavaConfAppContext(config);
-        ShorterService shorterService = context.getBean("shorterService");
-        assertNotNull(shorterService);
+        ShorterService shorterService1 = context.getBean("shorterService");
+        ShorterService shorterService2 = context.getBean("shorterService");
+        assertSame(shorterService1, shorterService2);
     }
 
 }
