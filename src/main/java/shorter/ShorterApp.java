@@ -4,7 +4,7 @@ import java.util.Optional;
 
 import static shorter.Link.linkTo;
 
-public class ShrorterApp {
+public class ShorterApp {
 
 	public static void main(String[] args) {
 		String url = "https://www.facebook.com/groups/KyivKUG/";
