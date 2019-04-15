@@ -2,6 +2,6 @@ package shorter;
 
 public interface ShorterService {
 
-	String shorten(String path);
+	String shorten(String fullPath);
 
 }
