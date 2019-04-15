@@ -21,7 +21,7 @@ public class JavaConfAppContext implements BeanFactory {
 
     @Override
     public BeanDefinition getBeanDefinition(final String beanName) {
-        return null;
+        return config.containsKey(beanName) ? new BeanDefinition(beanName) : null;
     }
 
     @Override
