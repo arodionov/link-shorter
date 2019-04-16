@@ -1,4 +1,6 @@
-package shorter;
+package shorter.repo;
+
+import shorter.repo.ShortLinksRepo;
 
 import java.util.HashMap;
 import java.util.Map;
