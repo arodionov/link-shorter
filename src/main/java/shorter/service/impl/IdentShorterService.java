@@ -1,4 +1,6 @@
-package shorter;
+package shorter.service.impl;
+
+import shorter.service.ShorterService;
 
 public class IdentShorterService implements ShorterService {
 

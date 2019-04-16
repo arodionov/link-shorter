@@ -1,4 +1,6 @@
-package shorter;
+package shorter.service;
+
+import shorter.model.Link;
 
 import java.util.Optional;
 

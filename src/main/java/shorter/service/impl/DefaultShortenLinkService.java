@@ -1,13 +1,23 @@
-package shorter;
+package shorter.service.impl;
+
+import shorter.model.Link;
+import shorter.repository.ShortLinksRepo;
+import shorter.service.ShortenLinkService;
+import shorter.service.ShorterService;
 
 import java.util.Optional;
 
-import static shorter.Link.HTTPLinkTo;
+import static shorter.model.Link.HTTPLinkTo;
 
 public class DefaultShortenLinkService implements ShortenLinkService {
 
-	private final ShortLinksRepo shortLinksRepo = new InMemShortLinksRepo();
-	private final ShorterService shorterService = new IdentShorterService();
+	private final ShortLinksRepo shortLinksRepo;
+	private final ShorterService shorterService;
+
+	public DefaultShortenLinkService(ShortLinksRepo shortLinksRepo, ShorterService shorterService) {
+		this.shortLinksRepo = shortLinksRepo;
+		this.shorterService = shorterService;
+	}
 
 	@Override
 	public Link shortLink(Link fullLink) {
