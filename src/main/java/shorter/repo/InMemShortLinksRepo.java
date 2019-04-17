@@ -1,4 +1,4 @@
-package shorter;
+package shorter.repo;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -18,4 +18,7 @@ public class InMemShortLinksRepo implements ShortLinksRepo {
 		links.put(shortPath, fullPath);
 	}
 
+	public void init(){
+		System.out.println("Method init in ShortLinksRepo");
+	}
 }

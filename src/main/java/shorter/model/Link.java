@@ -1,4 +1,4 @@
-package shorter;
+package shorter.model;
 
 public class Link {
 
