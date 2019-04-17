@@ -26,6 +26,11 @@ public class ShorterApp {
             put("linksRepo", InMemShortLinksRepo.class);
             put("shortenLinkService", DefaultShortenLinkService.class);
         }};
+        /*
+        TODO: Add bean for config with database connection and if we will add @Transactional we will create transaction
+        Add repo which will work with JPA and entity manager
+        Impl transaction support
+         */
         BeanFactory context = new JavaConfAppContext(config);
         ShorterService shorterService = context.getBean("shorterService");
         ShortLinksRepo inMemShortLinksRepo = context.getBean("linksRepo");
