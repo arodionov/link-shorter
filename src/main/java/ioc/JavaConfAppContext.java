@@ -1,6 +1,5 @@
 package ioc;
 
-import java.lang.reflect.Array;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -28,7 +27,7 @@ public class JavaConfAppContext implements BeanFactory {
         Class<?> beanClass = config.get(beanName);
         if (beanClass != null) {
             try {
-                bean = beanClass.getConstructor().newInstance();
+                bean = createBean(beanClass);
                 beans.put(beanName, bean);
                 callInitMethod(bean, beanClass);
                 callPostConstructMethod(bean, beanClass);
@@ -38,6 +37,11 @@ public class JavaConfAppContext implements BeanFactory {
             }
         }
         return null;
+    }
+
+    private Object createBean(final Class<?> beanClass) throws Exception {
+        Object bean = beanClass.getConstructor().newInstance();
+        return bean;
     }
 
     private void callInitMethod(Object bean, Class<?> beanClass) {
