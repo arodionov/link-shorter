@@ -45,6 +45,7 @@ public class JavaConfAppContext implements BeanFactory {
         if (types.length == 0) {
             bean = beanClass.getConstructor().newInstance();
         } else {
+            // todo: implement properly
             Object[] args = Arrays.stream(types)
                     .map(Class::getClass)
                     .map(Class::getName)
