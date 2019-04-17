@@ -40,7 +40,18 @@ public class JavaConfAppContext implements BeanFactory {
     }
 
     private Object createBean(final Class<?> beanClass) throws Exception {
-        Object bean = beanClass.getConstructor().newInstance();
+        Class<?>[] types = beanClass.getConstructor().getParameterTypes();
+        Object bean;
+        if (types.length == 0) {
+            bean = beanClass.getConstructor().newInstance();
+        } else {
+            Object[] args = Arrays.stream(types)
+                    .map(Class::getClass)
+                    .map(Class::getName)
+                    .map(this::getBean)
+                    .toArray();
+            bean = beanClass.getConstructor(types).newInstance(args);
+        }
         return bean;
     }
 
