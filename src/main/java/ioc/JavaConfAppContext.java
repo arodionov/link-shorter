@@ -34,7 +34,7 @@ public class JavaConfAppContext implements BeanFactory {
                 beans.put(beanName, createBeanBenchmarkProxy(bean, beanClass));
                 /*
                 TODO:
-                 If bean has @Becnhmark annotation for any method -
+                 If bean has @Benchmark annotation for any method -
                  create proxy for him, measure execution time, print it out like
                  Method name: execution time
                  */
@@ -56,7 +56,7 @@ public class JavaConfAppContext implements BeanFactory {
                     long before = System.nanoTime();
                     Object result = method.invoke(bean, args);
                     long after = System.nanoTime();
-                    System.out.println(method.getName() + ": " + (after - before));
+                    System.out.println(method + ": " + (after - before));
                     return result;
                 }
         );
@@ -65,6 +65,14 @@ public class JavaConfAppContext implements BeanFactory {
 
     private Object createBean(final Class<?> beanClass) throws Exception {
         Class<?>[] types = beanClass.getConstructor().getParameterTypes(); // npe is here
+        /*Constructor<?>[] constructors = beanClass.getConstructors();
+        for (Constructor<?> constructor : constructors) {
+            Arrays.stream(constructor.getParameterTypes())
+                    .map(Class::getClass)
+                    .map(Class::getName)
+                    .forEach(typeName ->
+                            );
+        }*/
         Object bean;
         if (types.length == 0) {
             bean = beanClass.getConstructor().newInstance();
