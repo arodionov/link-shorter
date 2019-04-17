@@ -22,9 +22,9 @@ public class ShorterApp {
         String url = "https://www.facebook.com/groups/KyivKUG/";
 
         Map<String, Class<?>> config = new HashMap<>() {{
-            put("shorterService", IdentShorterService.class);
-            put("linksRepo", InMemShortLinksRepo.class);
-            put("shortenLinkService", DefaultShortenLinkService.class);
+            put(ShorterService.class.getName(), IdentShorterService.class);
+            put(ShortLinksRepo.class.getName(), InMemShortLinksRepo.class);
+            put(ShortenLinkService.class.getName(), DefaultShortenLinkService.class);
         }};
         /*
         TODO: Add bean for config with database connection and if we will add @Transactional we will create transaction
@@ -32,11 +32,8 @@ public class ShorterApp {
         Impl transaction support
          */
         BeanFactory context = new JavaConfAppContext(config);
-        ShorterService shorterService = context.getBean("shorterService");
-        ShortLinksRepo inMemShortLinksRepo = context.getBean("linksRepo");
-        // ShortenLinkService sls = context.getBean("shortenLinkService");
+        ShortenLinkService shortenLinkService = context.getBean(ShortenLinkService.class.getName());
 
-        ShortenLinkService shortenLinkService = new DefaultShortenLinkService(inMemShortLinksRepo, shorterService);
         Link shortLink = shortenLinkService.shortLink(linkTo(url));
         System.out.println("Short link: " + shortLink.link());
 
