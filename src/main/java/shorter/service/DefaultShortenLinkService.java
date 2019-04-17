@@ -1,7 +1,7 @@
 package shorter.service;
 
+import ioc.PostConstructBean;
 import shorter.model.Link;
-import shorter.repository.InMemShortLinksRepo;
 import shorter.repository.ShortLinksRepo;
 
 import java.util.Optional;

@@ -1,5 +1,8 @@
 package ioc;
 
+import java.lang.reflect.Array;
+import java.lang.reflect.Method;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -27,12 +30,37 @@ public class JavaConfAppContext implements BeanFactory {
             try {
                 bean = beanClass.getConstructor().newInstance();
                 beans.put(beanName, bean);
+                callInitMethod(bean, beanClass);
+                callPostConstructMethod(bean, beanClass);
                 return (T) beans.get(beanName);
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
         }
         return null;
+    }
+
+    private void callInitMethod(Object bean, Class<?> beanClass) {
+        Method[] methods = beanClass.getDeclaredMethods();
+        Arrays.stream(methods).filter(m -> m.getName().equals("init")).findFirst().ifPresent(m -> {
+            try {
+                m.invoke(bean);
+            } catch (Exception e) {
+                // no action
+            }
+        });
+    }
+
+    private void callPostConstructMethod(Object bean, Class<?> beanClass) {
+        Method[] methods = beanClass.getDeclaredMethods();
+        Arrays.stream(methods).filter(m -> m.isAnnotationPresent(PostConstructBean.class))
+                .forEach(m -> {
+                    try {
+                        m.invoke(bean);
+                    } catch (Exception e) {
+                        // ignore
+                    }
+                });
     }
 
     @Override
