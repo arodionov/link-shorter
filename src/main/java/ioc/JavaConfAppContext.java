@@ -1,12 +1,15 @@
 package ioc;
 
+import ioc.annotations.Benchmark;
 import ioc.annotations.PostConstructBean;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Map;
 
 public class JavaConfAppContext implements BeanFactory {
 
@@ -31,15 +34,20 @@ public class JavaConfAppContext implements BeanFactory {
         if (beanClass != null) {
             try {
                 bean = createBean(beanClass);
-                beans.put(beanName, createBeanBenchmarkProxy(bean, beanClass));
-                /*
-                TODO:
-                 If bean has @Benchmark annotation for any method -
-                 create proxy for him, measure execution time, print it out like
-                 Method name: execution time
-                 */
-                callInitMethod(bean, beanClass);
-                callPostConstructMethod(bean, beanClass);
+
+                if (hasBenchmarkAnnotatedMethod(beanClass)) {
+                    beans.put(beanName, createBeanBenchmarkProxy(bean, beanClass));
+                } else {
+                    beans.put(beanName, bean);
+                }
+
+                if (hasInitMethod(beanClass)) {
+                    callInitMethod(bean, beanClass);
+                }
+
+                if (hasPostConstructMethod(beanClass)) {
+                    callPostConstructMethods(bean, beanClass);
+                }
                 return (T) beans.get(beanName);
             } catch (Exception e) {
                 throw new RuntimeException(e);
@@ -48,15 +56,37 @@ public class JavaConfAppContext implements BeanFactory {
         return null;
     }
 
+    private boolean hasBenchmarkAnnotatedMethod(Class<?> beanClass) {
+        return Arrays.stream(beanClass.getMethods())
+                .anyMatch(m -> m.isAnnotationPresent(Benchmark.class));
+    }
+
+    private boolean hasInitMethod(Class<?> beanClass) {
+        return Arrays.stream(beanClass.getMethods())
+                .anyMatch(m -> m.getName().equals("init"));
+    }
+
+    private boolean hasPostConstructMethod(Class<?> beanClass) {
+        return Arrays.stream(beanClass.getMethods())
+                .anyMatch(m -> m.isAnnotationPresent(PostConstructBean.class));
+    }
+
     private <T> T createBeanBenchmarkProxy(Object bean, Class<?> beanClass) {
         Object proxyBean = Proxy.newProxyInstance(
                 beanClass.getClassLoader(),
                 bean.getClass().getInterfaces(),
                 (proxy, method, args) -> {
-                    long before = System.nanoTime();
-                    Object result = method.invoke(bean, args);
-                    long after = System.nanoTime();
-                    System.out.println(method + ": " + (after - before));
+                    Object result;
+                    Method implMethod = beanClass.getMethod(method.getName(), method.getParameterTypes());
+                    if (implMethod.isAnnotationPresent(Benchmark.class) ||
+                            method.isAnnotationPresent(Benchmark.class)) {
+                        long before = System.nanoTime();
+                        result = method.invoke(bean, args);
+                        long after = System.nanoTime();
+                        System.out.println(method + ": " + (after - before));
+                    } else {
+                        result = method.invoke(bean, args);
+                    }
                     return result;
                 }
         );
@@ -79,19 +109,20 @@ public class JavaConfAppContext implements BeanFactory {
     }
 
     private void callInitMethod(Object bean, Class<?> beanClass) {
-        Method[] methods = beanClass.getDeclaredMethods();
-        Arrays.stream(methods).filter(m -> m.getName().equals("init")).findFirst().ifPresent(m -> {
-            try {
-                m.invoke(bean);
-            } catch (Exception e) {
-                // no action
-            }
-        });
+        Arrays.stream(beanClass.getMethods())
+                .filter(m -> m.getName().equals("init")).findFirst()
+                .ifPresent(m -> {
+                    try {
+                        m.invoke(bean);
+                    } catch (Exception e) {
+                        // no action
+                    }
+                });
     }
 
-    private void callPostConstructMethod(Object bean, Class<?> beanClass) {
-        Method[] methods = beanClass.getDeclaredMethods();
-        Arrays.stream(methods).filter(m -> m.isAnnotationPresent(PostConstructBean.class))
+    private void callPostConstructMethods(Object bean, Class<?> beanClass) {
+        Arrays.stream(beanClass.getMethods())
+                .filter(m -> m.isAnnotationPresent(PostConstructBean.class))
                 .forEach(m -> {
                     try {
                         m.invoke(bean);
