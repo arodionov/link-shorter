@@ -1,6 +1,7 @@
 package shorter.repository;
 
-import ioc.PostConstructBean;
+import ioc.annotations.Benchmark;
+import ioc.annotations.PostConstructBean;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -28,5 +29,10 @@ public class InMemShortLinksRepo implements ShortLinksRepo {
 	public void postConstruct() {
 		System.out.println("World");
 	}
+
+	@Benchmark
+	public void measuredMethod() {
+        System.out.println("!");
+    }
 
 }

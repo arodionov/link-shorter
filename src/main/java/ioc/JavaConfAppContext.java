@@ -1,6 +1,9 @@
 package ioc;
 
+import ioc.annotations.PostConstructBean;
+
 import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -28,7 +31,13 @@ public class JavaConfAppContext implements BeanFactory {
         if (beanClass != null) {
             try {
                 bean = createBean(beanClass);
-                beans.put(beanName, bean);
+                beans.put(beanName, createBeanBenchmarkProxy(bean, beanClass));
+                /*
+                TODO:
+                 If bean has @Becnhmark annotation for any method -
+                 create proxy for him, measure execution time, print it out like
+                 Method name: execution time
+                 */
                 callInitMethod(bean, beanClass);
                 callPostConstructMethod(bean, beanClass);
                 return (T) beans.get(beanName);
@@ -39,8 +48,23 @@ public class JavaConfAppContext implements BeanFactory {
         return null;
     }
 
+    private <T> T createBeanBenchmarkProxy(Object bean, Class<?> beanClass) {
+        Object proxyBean = Proxy.newProxyInstance(
+                beanClass.getClassLoader(),
+                bean.getClass().getInterfaces(),
+                (proxy, method, args) -> {
+                    long before = System.nanoTime();
+                    Object result = method.invoke(bean, args);
+                    long after = System.nanoTime();
+                    System.out.println(method.getName() + ": " + (after - before));
+                    return result;
+                }
+        );
+        return (T) proxyBean;
+    }
+
     private Object createBean(final Class<?> beanClass) throws Exception {
-        Class<?>[] types = beanClass.getConstructor().getParameterTypes();
+        Class<?>[] types = beanClass.getConstructor().getParameterTypes(); // npe is here
         Object bean;
         if (types.length == 0) {
             bean = beanClass.getConstructor().newInstance();

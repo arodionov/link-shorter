@@ -24,10 +24,12 @@ public class ShorterApp {
         Map<String, Class<?>> config = new HashMap<>() {{
             put("shorterService", IdentShorterService.class);
             put("linksRepo", InMemShortLinksRepo.class);
+            put("shortenLinkService", DefaultShortenLinkService.class);
         }};
         BeanFactory context = new JavaConfAppContext(config);
         ShorterService shorterService = context.getBean("shorterService");
         ShortLinksRepo inMemShortLinksRepo = context.getBean("linksRepo");
+        // ShortenLinkService sls = context.getBean("shortenLinkService");
 
         ShortenLinkService shortenLinkService = new DefaultShortenLinkService(inMemShortLinksRepo, shorterService);
         Link shortLink = shortenLinkService.shortLink(linkTo(url));

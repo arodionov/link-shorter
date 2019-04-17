@@ -1,6 +1,5 @@
 package shorter.service;
 
-import ioc.PostConstructBean;
 import shorter.model.Link;
 import shorter.repository.ShortLinksRepo;
 
