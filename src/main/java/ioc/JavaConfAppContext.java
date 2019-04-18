@@ -64,10 +64,37 @@ public class JavaConfAppContext implements BeanFactory {
             checkInitMethod(beanClass);
             checkPostConstructBeanAnnotation(beanClass);
             wrapWithProxy(beanClass);
-            return bean;
+            return beans.get(beanName);
         } catch (Exception e) {
             throw new RuntimeException("Exception occurred during bean instantiation");
         }
+    }
+
+    private void checkRequiredArguments(Class<?> beanClass) {
+        Class[] arguments = constructorArguments(beanClass);
+        if (arguments.length == 0) {
+            initNewBean(beanClass);
+        } else {
+            for (Class<?> argument : arguments) {
+                String beanName = beanNameFromClass(argument);
+                Object bean = beans.get(beanName);
+                if (bean == null) {
+                    initNewBean(argument);
+                }
+            }
+        }
+    }
+
+    private Object[] matchedBeansFromContext(Class<?>[] constructorArguments) {
+        Object[] injectionBeans = new Object[constructorArguments.length];
+        for (int i = 0; i < constructorArguments.length; i++) {
+            Class<?> argument = constructorArguments[i];
+            String beanName = beanNameFromClass(argument);
+            Class<?> concreteClass = config.get(beanName);
+            checkRequiredArguments(concreteClass);
+            injectionBeans[i] = beans.get(beanName);
+        }
+        return injectionBeans;
     }
 
     private void wrapWithProxy(Class<?> beanClass) {
@@ -77,9 +104,9 @@ public class JavaConfAppContext implements BeanFactory {
         Class<?>[] interfaces = bean.getClass().getInterfaces();
         List<String> annotatedMethodNames = benchmarkAnnotatedMethodNames(bean);
         if (!annotatedMethodNames.isEmpty()) {
-            Object proxyInstance = Proxy.newProxyInstance(classLoader, interfaces, new BeanBenchmarkInvocationHandler(bean, annotatedMethodNames));
-            beans.put(beanName, proxyInstance);
+            bean = Proxy.newProxyInstance(classLoader, interfaces, new BeanBenchmarkInvocationHandler(bean, annotatedMethodNames));
         }
+        beans.put(beanName, bean);
     }
 
     private List<String> benchmarkAnnotatedMethodNames(Object bean) {
@@ -103,18 +130,6 @@ public class JavaConfAppContext implements BeanFactory {
         }
     }
 
-    private Object[] matchedBeansFromContext(Class<?>[] constructorArguments) {
-        Object[] injectionBeans = new Object[constructorArguments.length];
-        for (int i = 0; i < constructorArguments.length; i++) {
-            Class<?> argument = constructorArguments[i];
-            String beanName = beanNameFromClass(argument);
-            Class<?> concreteClass = config.get(beanName);
-            checkRequiredArguments(concreteClass);
-            injectionBeans[i] = beans.get(beanName);
-        }
-        return injectionBeans;
-    }
-
     private void checkPostConstructBeanAnnotation(Class<?> beanClass) {
         Method[] declaredMethods = beanClass.getDeclaredMethods();
         for (Method declaredMethod : declaredMethods) {
@@ -125,21 +140,6 @@ public class JavaConfAppContext implements BeanFactory {
                     declaredMethod.invoke(o);
                 } catch (Exception e) {
                     e.printStackTrace();
-                }
-            }
-        }
-    }
-
-    private void checkRequiredArguments(Class<?> beanClass) {
-        Class[] arguments = constructorArguments(beanClass);
-        if (arguments.length == 0) {
-            initNewBean(beanClass);
-        } else {
-            for (Class<?> argument : arguments) {
-                String beanName = beanNameFromClass(argument);
-                Object bean = beans.get(beanName);
-                if (bean == null) {
-                    initNewBean(argument);
                 }
             }
         }
