@@ -1,9 +1,15 @@
 package ioc;
 
 import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class JavaConfAppContext implements BeanFactory {
 
@@ -55,9 +61,45 @@ public class JavaConfAppContext implements BeanFactory {
             Object bean = constructor.newInstance(initargs);
             String beanName = beanNameFromClass(beanClass);
             beans.put(beanName, bean);
+            checkInitMethod(beanClass);
+            checkPostConstructBeanAnnotation(beanClass);
+            wrapWithProxy(beanClass);
             return bean;
         } catch (Exception e) {
             throw new RuntimeException("Exception occurred during bean instantiation");
+        }
+    }
+
+    private void wrapWithProxy(Class<?> beanClass) {
+        String beanName = beanNameFromClass(beanClass);
+        Object bean = beans.get(beanName);
+        ClassLoader classLoader = bean.getClass().getClassLoader();
+        Class<?>[] interfaces = bean.getClass().getInterfaces();
+        List<String> annotatedMethodNames = benchmarkAnnotatedMethodNames(bean);
+        if (!annotatedMethodNames.isEmpty()) {
+            Object proxyInstance = Proxy.newProxyInstance(classLoader, interfaces, new BeanBenchmarkInvocationHandler(bean, annotatedMethodNames));
+            beans.put(beanName, proxyInstance);
+        }
+    }
+
+    private List<String> benchmarkAnnotatedMethodNames(Object bean) {
+        Method[] methods = bean.getClass().getMethods();
+        return Stream.of(methods)
+                .filter(method -> method.isAnnotationPresent(Benchmark.class))
+                .map(Method::getName)
+                .collect(Collectors.toList());
+    }
+
+    private void checkInitMethod(Class<?> beanClass) {
+        try {
+            Method initMethod = beanClass.getMethod("init");
+            if (initMethod != null) {
+                String beanName = beanNameFromClass(beanClass);
+                Object o = beans.get(beanName);
+                initMethod.invoke(o);
+            }
+        } catch (Exception e) {
+            //¯\_(ツ)_/¯
         }
     }
 
@@ -71,6 +113,21 @@ public class JavaConfAppContext implements BeanFactory {
             injectionBeans[i] = beans.get(beanName);
         }
         return injectionBeans;
+    }
+
+    private void checkPostConstructBeanAnnotation(Class<?> beanClass) {
+        Method[] declaredMethods = beanClass.getDeclaredMethods();
+        for (Method declaredMethod : declaredMethods) {
+            if (declaredMethod.isAnnotationPresent(PostConstructBean.class)) {
+                String beanName = beanNameFromClass(beanClass);
+                Object o = beans.get(beanName);
+                try {
+                    declaredMethod.invoke(o);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }
     }
 
     private void checkRequiredArguments(Class<?> beanClass) {
@@ -105,5 +162,33 @@ public class JavaConfAppContext implements BeanFactory {
             simpleName = interfaces[0].getSimpleName(); // to simplify implementation
         }
         return simpleName.substring(0, 1).toLowerCase() + simpleName.substring(1);
+    }
+
+    private class BeanBenchmarkInvocationHandler implements InvocationHandler {
+        private Object originalBean;
+        private List<String> annotatedMethods;
+
+        BeanBenchmarkInvocationHandler(Object originalBean, List<String> annotatedMethodNames) {
+            this.originalBean = originalBean;
+            this.annotatedMethods = annotatedMethodNames;
+        }
+
+        @Override
+        public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+            if (annotatedMethods.contains(method.getName())) {
+                long nanosBefore = System.nanoTime();
+                Object resultProxy = method.invoke(originalBean, args);
+                long nanosAfter = System.nanoTime();
+                String message = String.format(
+                        "Execution time of %s.%s is %d",
+                        originalBean.getClass().getSimpleName(),
+                        method.getName(),
+                        nanosAfter - nanosBefore
+                );
+                System.err.println(message);
+                return resultProxy;
+            }
+            return originalBean;
+        }
     }
 }
