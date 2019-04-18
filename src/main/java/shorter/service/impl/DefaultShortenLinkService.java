@@ -1,5 +1,7 @@
 package shorter.service.impl;
 
+import util.annotation.Benchmark;
+import util.annotation.PostConstructBean;
 import shorter.model.Link;
 import shorter.repository.ShortLinksRepo;
 import shorter.repository.impl.InMemShortLinksRepo;
@@ -21,8 +23,15 @@ public class DefaultShortenLinkService implements ShortenLinkService {
         this.shorterService = shorterService;
     }
 
+    @PostConstructBean
+    public void init() {
+        System.out.println("init() method invoked");
+    }
+
     @Override
+    @Benchmark
     public Link shortLink(Link fullLink) {
+        System.out.println("in shortLink");
         String fullPath = fullLink.getPath();
         String shortPath = shorterService.shorten(fullPath);
         shortLinksRepo.put(shortPath, fullPath);

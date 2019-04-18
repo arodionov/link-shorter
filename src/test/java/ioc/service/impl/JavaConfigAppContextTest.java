@@ -1,5 +1,7 @@
 package ioc.service.impl;
 
+import shorter.model.Link;
+import shorter.service.ShortenLinkService;
 import shorter.service.impl.DefaultShortenLinkService;
 import shorter.service.test.FirstTestForCycleDepsService;
 import util.BeanDefinition;
@@ -90,6 +92,17 @@ public class JavaConfigAppContextTest {
         Map<String, Class<?>> config = of("def", DefaultShortenLinkService.class);
         BeanFactory context = new JavaConfigAppContext(config);
 
-        context.getBean("def");
+        ShortenLinkService def = context.getBean("def");
+        def.fullLink(Link.linkTo("test"));
+    }
+
+    /**
+     * HOMEWORK:
+     * - finish with @Benchmark annotation
+     * - @Transactional (EntityManagerBean (connect to db) - create, close tx, and save Links to database (with tx annotation)
+     */
+
+    public void hw() {
+
     }
 }
