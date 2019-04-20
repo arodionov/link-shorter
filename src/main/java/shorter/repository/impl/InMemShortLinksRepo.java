@@ -10,7 +10,9 @@ public class InMemShortLinksRepo implements ShortLinksRepo {
 
     private Map<String, String> links = new HashMap<>();
 
-    public void init(){}
+    public void init() {
+        System.out.println("init() : " + this.getClass().getName());
+    }
 
     @Override
     public Optional<String> get(String shortPath) {

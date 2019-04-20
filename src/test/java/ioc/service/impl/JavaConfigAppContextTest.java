@@ -1,14 +1,14 @@
 package ioc.service.impl;
 
-import shorter.model.Link;
-import shorter.service.ShortenLinkService;
-import shorter.service.impl.DefaultShortenLinkService;
-import shorter.service.test.FirstTestForCycleDepsService;
-import util.BeanDefinition;
 import ioc.service.BeanFactory;
 import org.junit.Test;
+import shorter.repository.impl.InMemShortLinksRepo;
+import shorter.service.ShortenLinkService;
 import shorter.service.ShorterService;
+import shorter.service.impl.DefaultShortenLinkService;
 import shorter.service.impl.IdentShorterService;
+import shorter.service.test.FirstTestForCycleDepsService;
+import util.BeanDefinition;
 import util.exception.CycleDependencyException;
 
 import java.util.Map;
@@ -89,11 +89,15 @@ public class JavaConfigAppContextTest {
 
     @Test
     public void getBeanAreWithDependencies() {
-        Map<String, Class<?>> config = of("def", DefaultShortenLinkService.class);
+        Map<String, Class<?>> config = of(
+                "default", DefaultShortenLinkService.class,
+                "linksRepo", InMemShortLinksRepo.class,
+                "shorterService", IdentShorterService.class,
+                "test", IdentShorterService.class);
         BeanFactory context = new JavaConfigAppContext(config);
 
-        ShortenLinkService def = context.getBean("def");
-        def.fullLink(Link.linkTo("test"));
+        ShortenLinkService def = context.getBean("default");
+//        def.fullLink(Link.linkTo("test"));
     }
 
     /**
@@ -101,7 +105,6 @@ public class JavaConfigAppContextTest {
      * - finish with @Benchmark annotation
      * - @Transactional (EntityManagerBean (connect to db) - create, close tx, and save Links to database (with tx annotation)
      */
-
     public void hw() {
 
     }

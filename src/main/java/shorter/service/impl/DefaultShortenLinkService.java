@@ -17,15 +17,14 @@ public class DefaultShortenLinkService implements ShortenLinkService {
     private final ShortLinksRepo shortLinksRepo;
     private final ShorterService shorterService;
 
-    public DefaultShortenLinkService(InMemShortLinksRepo shortLinksRepo,
-                                     IdentShorterService shorterService) {
+    public DefaultShortenLinkService(ShortLinksRepo shortLinksRepo, ShorterService shorterService) {
         this.shortLinksRepo = shortLinksRepo;
         this.shorterService = shorterService;
     }
 
     @PostConstructBean
     public void init() {
-        System.out.println("init() method invoked");
+        System.out.println("init() : " + this.getClass().getName());
     }
 
     @Override
