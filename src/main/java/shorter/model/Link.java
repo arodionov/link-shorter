@@ -1,30 +1,51 @@
 package shorter.model;
 
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import org.hibernate.annotations.NaturalId;
+
+import javax.persistence.*;
+
+@NoArgsConstructor
+@Getter
+@Setter
+@Entity
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class Link {
+    @Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE)
+    private Long id;
+    @NaturalId
+    @Column(nullable = false)
+    @EqualsAndHashCode.Include
+    private String link;
+    @OneToOne(mappedBy = "link")
+    private ShortedLink shortedLink;
 
-	private final String link;
+    public Link(String link) {
+        check(link);
+        this.link = link;
+    }
 
-	public static Link linkTo(String link) {
-		return new Link(link);
-	}
+    public static Link linkTo(String link) {
+        return new Link(link);
+    }
 
-	public static Link HTTPLinkTo(String path) {
-		return new Link("http://" + path);
-	}
+    public static Link HTTPLinkTo(String path) {
+        return new Link("http://" + path);
+    }
 
-	public Link(String link) {
-		check(link);
-		this.link = link;
-	}
+    private void check(String link) {
+    }
 
-	private void check(String link) {
-	}
+    public String getPath() {
+        return link.substring(link.indexOf("//") + 2);
+    }
 
-	public String getPath() {
-		return link.substring(link.indexOf("//") + 2);
-	}
+    public String link() {
+        return link;
+    }
 
-	public String link() {
-		return link;
-	}
 }

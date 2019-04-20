@@ -3,6 +3,8 @@ package ioc;
 import ioc.annotations.Benchmark;
 import ioc.annotations.PostConstructBean;
 
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.Persistence;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
@@ -15,6 +17,7 @@ public class JavaConfAppContext implements BeanFactory {
 
     private final Map<String, Class<?>> config;
     private final Map<String, Object> beans = new HashMap<>();
+    private final String PERSISTENCE_PROPERTIES_NAME = "ShorterEntityProperties";
 
     public JavaConfAppContext() {
         this.config = Map.of();
@@ -94,11 +97,19 @@ public class JavaConfAppContext implements BeanFactory {
     }
 
     private Object createBean(final Class<?> beanClass) throws Exception {
+        if (isEntityManagerFactory(beanClass)) {
+            return Persistence.createEntityManagerFactory(PERSISTENCE_PROPERTIES_NAME);
+        }
+
         Constructor<?> constructor = Arrays.stream(beanClass.getConstructors())
                 .max(Comparator.comparingInt(Constructor::getParameterCount))
                 .orElseThrow(() -> new RuntimeException("Bean have no constructors"));
 
         return constructor.newInstance(getBeansByClasses(constructor.getParameterTypes()));
+    }
+
+    private boolean isEntityManagerFactory(final Class<?> beanClass) {
+        return beanClass.equals(EntityManagerFactory.class);
     }
 
     private Object[] getBeansByClasses(Class<?>[] classes) {
