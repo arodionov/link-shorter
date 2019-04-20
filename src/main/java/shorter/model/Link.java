@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.NaturalId;
+import shorter.util.LinkUtil;
 
 import javax.persistence.*;
 
@@ -25,7 +26,7 @@ public class Link {
     private ShortedLink shortedLink;
 
     public Link(String link) {
-        check(link);
+        LinkUtil.check(link);
         this.link = link;
     }
 
@@ -35,9 +36,6 @@ public class Link {
 
     public static Link HTTPLinkTo(String path) {
         return new Link("http://" + path);
-    }
-
-    private void check(String link) {
     }
 
     public String getPath() {
