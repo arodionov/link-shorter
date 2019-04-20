@@ -1,24 +1,25 @@
 package shorter.repository;
 
+import ioc.annotations.Transactional;
 import org.hibernate.Session;
 import shorter.model.Link;
 import shorter.model.ShortedLink;
+import shorter.util.EntityManagerProvider;
 
 import javax.persistence.EntityManager;
-import javax.persistence.EntityManagerFactory;
 import java.util.Optional;
 
 public class ShortLinksRepoPostgres implements ShortLinksRepo {
 
-    private final EntityManagerFactory entityManagerFactory;
+    private final EntityManagerProvider entityManagerProvider;
 
-    public ShortLinksRepoPostgres(final EntityManagerFactory entityManagerFactory) {
-        this.entityManagerFactory = entityManagerFactory;
+    public ShortLinksRepoPostgres(final EntityManagerProvider entityManagerProvider) {
+        this.entityManagerProvider = entityManagerProvider;
     }
 
     @Override
     public Optional<String> get(final String shortPath) {
-        EntityManager entityManager = entityManagerFactory.createEntityManager();
+        EntityManager entityManager = entityManagerProvider.getEntityManager();
         ShortedLink shortedLink =
                 entityManager.unwrap(Session.class).bySimpleNaturalId(ShortedLink.class).load(shortPath);
 
@@ -31,13 +32,13 @@ public class ShortLinksRepoPostgres implements ShortLinksRepo {
     }
 
     @Override
+    @Transactional
     public void put(final String shortPath, final String fullPath) {
-        EntityManager entityManager = entityManagerFactory.createEntityManager();
-        entityManager.getTransaction().begin();
+        EntityManager entityManager = entityManagerProvider.getEntityManager();
+        entityManager.joinTransaction();
         Link link = new Link(fullPath);
         entityManager.persist(link);
         ShortedLink shortedLink = new ShortedLink(shortPath, link);
         entityManager.persist(shortedLink);
-        entityManager.getTransaction().commit();
     }
 }

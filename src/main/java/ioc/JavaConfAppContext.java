@@ -2,7 +2,10 @@ package ioc;
 
 import ioc.annotations.Benchmark;
 import ioc.annotations.PostConstructBean;
+import ioc.annotations.Transactional;
+import shorter.util.EntityManagerProvider;
 
+import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.Persistence;
 import java.lang.reflect.Constructor;
@@ -12,12 +15,14 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Stream;
 
 public class JavaConfAppContext implements BeanFactory {
 
     private final Map<String, Class<?>> config;
     private final Map<String, Object> beans = new HashMap<>();
     private final String PERSISTENCE_PROPERTIES_NAME = "ShorterEntityProperties";
+    private EntityManager currentEntityManager;
 
     public JavaConfAppContext() {
         this.config = Map.of();
@@ -39,10 +44,18 @@ public class JavaConfAppContext implements BeanFactory {
                 bean = createBean(beanClass);
 
                 if (hasBenchmarkAnnotatedMethod(beanClass)) {
-                    beans.put(beanName, createBeanBenchmarkProxy(bean, beanClass));
-                } else {
-                    beans.put(beanName, bean);
+                    bean = createBeanBenchmarkProxy(bean, beanClass);
                 }
+
+                if (hasTransactionalAnnotatedMethod(beanClass)) {
+                    bean = createBeanTransactionalProxy(bean, beanClass);
+                }
+
+                if (isEntityManagerProvider(beanClass)) {
+                    bean = createEntityManagerProviderProxy(bean, beanClass);
+                }
+
+                beans.put(beanName, bean);
 
                 if (hasInitMethod(beanClass)) {
                     callInitMethod(bean, beanClass);
@@ -57,6 +70,15 @@ public class JavaConfAppContext implements BeanFactory {
             }
         }
         return null;
+    }
+
+    private boolean isEntityManagerProvider(Class<?> beanClass) {
+        return Arrays.asList(beanClass.getInterfaces()).contains(EntityManagerProvider.class);
+    }
+
+    private boolean hasTransactionalAnnotatedMethod(Class<?> beanClass) {
+        return Arrays.stream(beanClass.getMethods())
+                .anyMatch(m -> m.isAnnotationPresent(Transactional.class));
     }
 
     private boolean hasBenchmarkAnnotatedMethod(Class<?> beanClass) {
@@ -74,15 +96,75 @@ public class JavaConfAppContext implements BeanFactory {
                 .anyMatch(m -> m.isAnnotationPresent(PostConstructBean.class));
     }
 
+    private <T> T createEntityManagerProviderProxy(Object bean, Class<?> beanClass) {
+        Object proxyBean = Proxy.newProxyInstance(
+                beanClass.getClassLoader(),
+                bean.getClass().getInterfaces(),
+                (proxy, method, args) -> {
+                    if (returnsEntityManager(beanClass, method)) {
+                        if (currentEntityManager == null || !currentEntityManager.isOpen()) {
+                            EntityManagerFactory entityManagerFactory = getBean(EntityManagerFactory.class.getName());
+                            currentEntityManager = entityManagerFactory.createEntityManager();
+                        }
+                        return currentEntityManager;
+                    }
+                    return method.invoke(bean, args);
+                }
+        );
+        return (T) proxyBean;
+    }
+
+    private <T> T createBeanTransactionalProxy(Object bean, Class<?> beanClass) {
+        Object proxyBean = Proxy.newProxyInstance(
+                beanClass.getClassLoader(),
+                bean.getClass().getInterfaces(),
+                (proxy, method, args) -> {
+                    Object result;
+                    if (hasTransactionalAnnotation(beanClass, method)) {
+                        result = invokeWithTransaction(method, bean, args);
+                    } else {
+                        result = method.invoke(bean, args);
+                    }
+                    return result;
+                }
+        );
+        return (T) proxyBean;
+    }
+
+    private Object invokeWithTransaction(Method method, Object bean, Object[] args) throws Exception {
+        EntityManagerFactory entityManagerFactory = getBean(EntityManagerFactory.class.getName());
+        currentEntityManager = entityManagerFactory.createEntityManager();
+        currentEntityManager.getTransaction().begin();
+        try {
+            Object res = method.invoke(bean, args);
+            currentEntityManager.getTransaction().commit();
+            return res;
+        } catch (Exception e) {
+            currentEntityManager.getTransaction().rollback();
+            throw e;
+        } finally {
+            currentEntityManager.close();
+        }
+    }
+
+    private boolean returnsEntityManager(Class<?> beanClass, Method interfaceMethod) throws Exception {
+        Method implMethod = beanClass.getMethod(interfaceMethod.getName(), interfaceMethod.getParameterTypes());
+        return implMethod.getReturnType().equals(EntityManager.class) ||
+                interfaceMethod.getReturnType().equals(EntityManager.class);
+    }
+
+    private boolean hasTransactionalAnnotation(Class<?> beanClass, Method interfaceMethod) throws NoSuchMethodException {
+        Method implMethod = beanClass.getMethod(interfaceMethod.getName(), interfaceMethod.getParameterTypes());
+        return implMethod.isAnnotationPresent(Transactional.class) || interfaceMethod.isAnnotationPresent(Transactional.class);
+    }
+
     private <T> T createBeanBenchmarkProxy(Object bean, Class<?> beanClass) {
         Object proxyBean = Proxy.newProxyInstance(
                 beanClass.getClassLoader(),
                 bean.getClass().getInterfaces(),
                 (proxy, method, args) -> {
                     Object result;
-                    Method implMethod = beanClass.getMethod(method.getName(), method.getParameterTypes());
-                    if (implMethod.isAnnotationPresent(Benchmark.class) ||
-                            method.isAnnotationPresent(Benchmark.class)) {
+                    if (hasBenchmarkAnnotation(beanClass, method)) {
                         long before = System.nanoTime();
                         result = method.invoke(bean, args);
                         long after = System.nanoTime();
@@ -94,6 +176,11 @@ public class JavaConfAppContext implements BeanFactory {
                 }
         );
         return (T) proxyBean;
+    }
+
+    private boolean hasBenchmarkAnnotation(Class<?> beanClass, Method interfaceMethod) throws NoSuchMethodException {
+        Method implMethod = beanClass.getMethod(interfaceMethod.getName(), interfaceMethod.getParameterTypes());
+        return implMethod.isAnnotationPresent(Benchmark.class) || interfaceMethod.isAnnotationPresent(Benchmark.class);
     }
 
     private Object createBean(final Class<?> beanClass) throws Exception {

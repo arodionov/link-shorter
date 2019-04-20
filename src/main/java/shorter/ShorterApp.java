@@ -9,7 +9,8 @@ import shorter.service.DefaultShortenLinkService;
 import shorter.service.IdentShorterService;
 import shorter.service.ShortenLinkService;
 import shorter.service.ShorterService;
-import shorter.util.EntityManagerUtil;
+import shorter.util.EntityManagerProvider;
+import shorter.util.EntityManagerProviderImpl;
 
 import javax.persistence.EntityManagerFactory;
 import java.util.HashMap;
@@ -25,8 +26,8 @@ public class ShorterApp {
 
         Map<String, Class<?>> config = new HashMap<>() {{
             put(EntityManagerFactory.class.getName(), EntityManagerFactory.class);
-            put(EntityManagerUtil.class.getName(), EntityManagerUtil.class);
             put(ShortLinksRepo.class.getName(), ShortLinksRepoPostgres.class);
+            put(EntityManagerProvider.class.getName(), EntityManagerProviderImpl.class);
             put(ShorterService.class.getName(), IdentShorterService.class);
             put(ShortenLinkService.class.getName(), DefaultShortenLinkService.class);
         }};
