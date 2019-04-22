@@ -34,7 +34,7 @@ public class ShortedLink {
     }
 
     public String getPath() {
-        return shortedLink.substring(shortedLink.indexOf("//") + 1);
+        return LinkUtil.getPath(shortedLink);
     }
 
     public String link() {

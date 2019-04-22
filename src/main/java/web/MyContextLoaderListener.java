@@ -1,7 +1,5 @@
 package web;
 
-import org.springframework.context.annotation.AnnotationConfigApplicationContext;
-
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 

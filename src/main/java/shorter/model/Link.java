@@ -39,7 +39,7 @@ public class Link {
     }
 
     public String getPath() {
-        return link.substring(link.indexOf("//") + 2);
+        return LinkUtil.getPath(link);
     }
 
     public String link() {

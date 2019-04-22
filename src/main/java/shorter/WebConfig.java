@@ -10,21 +10,21 @@ import shorter.service.ShortenLinkService;
 import web.MyController;
 
 @Configuration
-public class WebConfig {
+public class WebConfig extends AppConfig {
 
     @Bean
     public MyController hello() {
         return new HelloController();
     }
 
-    //req examp: http://localhost:8080/shorter/short?full=http://jug.ua
+    //req examp: http://localhost:8081/shorter/shorter?full=http://jug.ua
     @Bean
     @Autowired
     public MyController shorter(ShortenLinkService shortenLinkService) {
         return new ShorterController(shortenLinkService);
     }
 
-    //req examp: http://localhost:8080/shorter/full?short=http://asdsa.sh
+    //req examp: http://localhost:8081/shorter/full?short=http://jug.ua
     @Bean
     @Autowired
     public MyController full(ShortenLinkService shortenLinkService) {
