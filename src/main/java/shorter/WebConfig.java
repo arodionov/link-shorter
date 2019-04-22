@@ -10,7 +10,7 @@ import shorter.service.ShortenLinkService;
 import web.MyController;
 
 @Configuration
-public class WebConfig extends AppConfig {
+public class WebConfig {
 
     @Bean
     public MyController hello() {

@@ -1,5 +1,6 @@
 package web;
 
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import shorter.AppConfig;
 
@@ -15,11 +16,16 @@ public class MyDispatcherServlet extends HttpServlet {
 
     @Override
     public void init() throws ServletException {
-        Class<?> webConfigClass = getWebConfigClass();
-        webCtx = new AnnotationConfigApplicationContext(webConfigClass);
-        AnnotationConfigApplicationContext parent =
-                new AnnotationConfigApplicationContext(AppConfig.class);
-        webCtx.setParent(parent);
+        webCtx = new AnnotationConfigApplicationContext();
+        webCtx.setParent((ApplicationContext)
+                getServletContext().getAttribute(AppConfig.class.getName()));
+        webCtx.register(getAppConfigClass());
+        webCtx.register(getWebConfigClass());
+        webCtx.refresh();
+    }
+
+    private Class<?> getAppConfigClass() {
+        return AppConfig.class;
     }
 
     private Class<?> getWebConfigClass() {
