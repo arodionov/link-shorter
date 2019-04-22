@@ -15,12 +15,22 @@ public class MyDispatcherServlet extends HttpServlet {
 
     @Override
     public void init() throws ServletException {
-        String location =
+        Class<?> webConfigClass = getWebConfigClass();
+        webCtx = new AnnotationConfigApplicationContext(webConfigClass);
+
+        //TODO: webCtx.setParent(parentContext);
+        // should be loaded parent context with business logic
+    }
+
+    private Class<?> getWebConfigClass() {
+        String contextConfigClass =
                 getInitParameter("contextConfigLocation");
+
         try {
-            webCtx = new AnnotationConfigApplicationContext(Class.forName(location));
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
+            return Class.forName(contextConfigClass);
+        }
+        catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
         }
     }
 
