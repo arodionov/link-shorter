@@ -15,7 +15,13 @@ public class MyDispatcherServlet extends HttpServlet {
 
     @Override
     public void init() throws ServletException {
-        webCtx = new AnnotationConfigApplicationContext(WebConfig.class);
+        String location =
+                getInitParameter("contextConfigLocation");
+        try {
+            webCtx = new AnnotationConfigApplicationContext(Class.forName(location));
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
