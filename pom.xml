@@ -7,6 +7,8 @@
     <groupId>pro.camp</groupId>
     <artifactId>shorter</artifactId>
     <version>1.0-SNAPSHOT</version>
+    <packaging>war</packaging>
+
     <build>
         <plugins>
             <plugin>
