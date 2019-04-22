@@ -3,6 +3,7 @@ package shorter;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import shorter.model.Link;
+import shorter.model.ShortedLink;
 import shorter.service.ShortenLinkService;
 
 import java.util.Optional;
@@ -16,10 +17,10 @@ public class ShorterApp {
         ApplicationContext context = new AnnotationConfigApplicationContext(AppConfig.class);
         ShortenLinkService shortenLinkService = context.getBean(ShortenLinkService.class);
 
-        Link shortLink = shortenLinkService.shortLink(linkTo(url));
+        ShortedLink shortLink = shortenLinkService.shortLink(linkTo(url));
         System.out.println("Short link: " + shortLink.link());
 
-        Optional<Link> fullLink = shortenLinkService.fullLink(shortLink);
+        Optional<Link> fullLink = shortenLinkService.fullLink(shortLink.link());
         System.out.println("Full link: " + fullLink.get().link());
 
     }

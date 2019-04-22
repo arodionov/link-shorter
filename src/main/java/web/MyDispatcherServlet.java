@@ -1,7 +1,7 @@
 package web;
 
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
-import shorter.WebConfig;
+import shorter.AppConfig;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -17,9 +17,9 @@ public class MyDispatcherServlet extends HttpServlet {
     public void init() throws ServletException {
         Class<?> webConfigClass = getWebConfigClass();
         webCtx = new AnnotationConfigApplicationContext(webConfigClass);
-
-        //TODO: webCtx.setParent(parentContext);
-        // should be loaded parent context with business logic
+        AnnotationConfigApplicationContext parent =
+                new AnnotationConfigApplicationContext(AppConfig.class);
+        webCtx.setParent(parent);
     }
 
     private Class<?> getWebConfigClass() {
@@ -28,8 +28,7 @@ public class MyDispatcherServlet extends HttpServlet {
 
         try {
             return Class.forName(contextConfigClass);
-        }
-        catch (ClassNotFoundException e) {
+        } catch (ClassNotFoundException e) {
             throw new RuntimeException(e);
         }
     }

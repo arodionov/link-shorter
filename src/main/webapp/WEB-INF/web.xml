@@ -5,6 +5,15 @@
          xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee
         http://xmlns.jcp.org/xml/ns/javaee/web-app_3_1.xsd">
 
+    <context-param>
+        <param-name>contextConfigLocation</param-name>
+        <param-value>shorter.AppConfig</param-value>
+    </context-param>
+
+    <listener>
+        <listener-class>web.MyContextLoaderListener</listener-class>
+    </listener>
+
     <servlet>
         <servlet-name>DispatcherServlet</servlet-name>
         <servlet-class>web.MyDispatcherServlet</servlet-class>

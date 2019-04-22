@@ -33,4 +33,12 @@ public class ShortedLink {
         this.linkId = this.link.getId();
     }
 
+    public String getPath() {
+        return shortedLink.substring(shortedLink.indexOf("//") + 1);
+    }
+
+    public String link() {
+        return shortedLink;
+    }
+
 }
