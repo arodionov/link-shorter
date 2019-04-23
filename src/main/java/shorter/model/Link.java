@@ -1,30 +1,36 @@
 package shorter.model;
 
+import javax.persistence.*;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
+
+@Setter
+@Getter
+@EqualsAndHashCode(of = {"fullLink","shortLink"})
+@NoArgsConstructor
+@ToString
+@Entity
 public class Link {
 
-	private final String link;
+	@Id
+	@GeneratedValue(strategy = GenerationType.SEQUENCE)
+	private Long id;
 
-	public static Link linkTo(String link) {
-		return new Link(link);
+	@Column(nullable = false, unique = true)
+	private String fullLink;
+
+	@Column(nullable = false, unique = true)
+	private String shortLink;
+
+	public Link(String fullLink) {
+		this.fullLink = fullLink;
 	}
 
-	public static Link HTTPLinkTo(String path) {
-		return new Link("http://" + path);
-	}
-
-	public Link(String link) {
-		check(link);
-		this.link = link;
-	}
-
-	private void check(String link) {
-	}
-
-	public String getPath() {
-		return link.substring(link.indexOf("//") + 2);
-	}
-
-	public String link() {
-		return link;
+	public Link(String fullLink, String shortLink) {
+		this.fullLink = fullLink;
+		this.shortLink = shortLink;
 	}
 }

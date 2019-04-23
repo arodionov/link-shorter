@@ -1,10 +1,16 @@
 package shorter.repo;
 
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Optional;
+import java.util.Set;
+import shorter.model.Link;
 
 public interface ShortLinksRepo {
 
-	Optional<String> get(String shortPath);
+	Optional<Link> getByShortLink(String shortPath);
 
-	void put(String shortPath, String fullPath);
+	Link put(String shortPath, String fullPath);
+
+	Collection<Link> getAll();
 }

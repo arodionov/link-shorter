@@ -44,18 +44,28 @@ public class MyDispatcherServlet extends HttpServlet {
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp)
 		throws ServletException, IOException {
 		String controllerName = getControllerName(req);
-		MyController controller = (MyController) webContext.getBean(controllerName);
+		MyController controller = dispatchController(controllerName);
 		controller.handleRequest(req, resp);
 	}
 
 	private String getControllerName(HttpServletRequest req) {
 		String uri = req.getRequestURI();
+		System.out.println(uri);
 		return uri.substring(uri.lastIndexOf("/") + 1);
 	}
 
+	private MyController dispatchController(String name) {
+		MyController controller;
+		if (name.equals("showAll")) {
+			controller = (MyController) webContext.getBean("showController");
+		} else {
+			controller = (MyController) webContext.getBean("defaultController");
+		}
+		return controller;
+	}
+
 	@Override
-	protected void doPost(HttpServletRequest req, HttpServletResponse resp)
-		throws ServletException, IOException {
+	protected void doPost(HttpServletRequest req, HttpServletResponse resp) {
 
 	}
 
