@@ -6,7 +6,6 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Configuration;
 import web.MyController;
 
-@Configuration
 public class BeanNameHandlerMapping extends HandlerMapping {
 
 	public BeanNameHandlerMapping() {
@@ -30,7 +29,7 @@ public class BeanNameHandlerMapping extends HandlerMapping {
 
 	private MyController findControllerInContext(String name) {
 		try {
-			return (MyController) applicationContext.getBean(name);
+			return (MyController) applicationContext.getBean(name+"Controller");
 		} catch (BeansException e) {
 			return (MyController) applicationContext.getBean("defaultController");
 		}

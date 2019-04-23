@@ -16,14 +16,9 @@ public class MyDispatcherServlet extends HttpServlet {
 
 	@Override
 	public void init() {
-		Enumeration<String> attributeNames = getServletContext().getAttributeNames();
-		while (attributeNames.hasMoreElements()){
-			System.out.println(attributeNames.nextElement());
-		}
 		ApplicationContext rootApplicationContext = getRootApplicationContext();
 		ApplicationContext webContext = getWebContext(rootApplicationContext);
 		handlerMapping = getHandlerMapping();
-		System.out.println(handlerMapping);
 		handlerMapping.setApplicationContext(webContext);
 	}
 
