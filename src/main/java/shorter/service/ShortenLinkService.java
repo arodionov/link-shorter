@@ -6,7 +6,7 @@ import shorter.model.Link;
 
 public interface ShortenLinkService {
 
-	Link shortLink(Link fullLink);
+	Link shortLink(String fullLink);
 
 	Optional<Link> fullLink(Link shortLink);
 
