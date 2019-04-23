@@ -9,15 +9,15 @@
     <listener-class>web.MyContextLoaderListener</listener-class>
   </listener>
 
-  <context-param>
-    <param-name>handler-mapping</param-name>
-    <param-value>web.handlerMappings.BeanNameHandlerMapping</param-value>
-  </context-param>
+<!--  <context-param>-->
+<!--    <param-name>handler-mapping</param-name>-->
+<!--    <param-value>web.handlerMappings.BeanNameHandlerMapping</param-value>-->
+<!--  </context-param>-->
 
-  <context-param>
-    <param-name>rootroot-config</param-name>
-    <param-value>shorter.config.RootConfig</param-value>
-  </context-param>
+<!--  <context-param>-->
+<!--    <param-name>rootroot-config</param-name>-->
+<!--    <param-value>shorter.config.RootConfig</param-value>-->
+<!--  </context-param>-->
 
 
   <servlet>

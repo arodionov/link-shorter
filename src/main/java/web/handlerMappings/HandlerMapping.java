@@ -1,5 +1,21 @@
-package web.HandlerMappings;
+package web.handlerMappings;
 
-public class HandlerMapping {
+import javax.servlet.http.HttpServletRequest;
+import org.springframework.context.ApplicationContext;
+import web.MyController;
+
+public abstract class HandlerMapping {
+	protected ApplicationContext applicationContext;
+
+
+	public HandlerMapping() {
+	}
+
+	public void setApplicationContext(ApplicationContext applicationContext) {
+		this.applicationContext = applicationContext;
+	}
+
+	public abstract MyController getController(HttpServletRequest httpServletRequest);
+
 
 }

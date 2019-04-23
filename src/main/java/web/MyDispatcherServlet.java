@@ -1,24 +1,34 @@
 package web;
 
 import java.io.IOException;
+import java.util.Enumeration;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import web.handlerMappings.HandlerMapping;
 
 public class MyDispatcherServlet extends HttpServlet {
 
-	private AnnotationConfigApplicationContext webContext;
+	private HandlerMapping handlerMapping;
 
 	@Override
 	public void init() {
+		Enumeration<String> attributeNames = getServletContext().getAttributeNames();
+		while (attributeNames.hasMoreElements()){
+			System.out.println(attributeNames.nextElement());
+		}
 		ApplicationContext rootApplicationContext = getRootApplicationContext();
-		initWebContext(rootApplicationContext);
+		ApplicationContext webContext = getWebContext(rootApplicationContext);
+		handlerMapping = getHandlerMapping();
+		System.out.println(handlerMapping);
+		handlerMapping.setApplicationContext(webContext);
 	}
 
-	private void initWebContext(ApplicationContext rootApplicationContext) {
+	private ApplicationContext getWebContext(ApplicationContext rootApplicationContext) {
+		AnnotationConfigApplicationContext webContext;
 		Class<?> webConfigClass = getWebConfigClass();
 		//We cant set config class in the constructor, bc we have dependency from parent
 		//Singleton beans initialize and throw an Exception. (@Lazy fix this)
@@ -26,10 +36,15 @@ public class MyDispatcherServlet extends HttpServlet {
 		webContext.setParent(rootApplicationContext);
 		webContext.register(webConfigClass);
 		webContext.refresh();
+		return webContext;
 	}
 
 	private ApplicationContext getRootApplicationContext() {
 		return (ApplicationContext) getServletContext().getAttribute("root-config");
+	}
+
+	private HandlerMapping getHandlerMapping() {
+		return (HandlerMapping) getServletContext().getAttribute("handler-mapping");
 	}
 
 	private Class<?> getWebConfigClass() {
@@ -43,25 +58,8 @@ public class MyDispatcherServlet extends HttpServlet {
 	@Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp)
 		throws ServletException, IOException {
-		String controllerName = getControllerName(req);
-		MyController controller = dispatchController(controllerName);
+		MyController controller = handlerMapping.getController(req);
 		controller.handleRequest(req, resp);
-	}
-
-	private String getControllerName(HttpServletRequest req) {
-		String uri = req.getRequestURI();
-		System.out.println(uri);
-		return uri.substring(uri.lastIndexOf("/") + 1);
-	}
-
-	private MyController dispatchController(String name) {
-		MyController controller;
-		if (name.equals("showAll")) {
-			controller = (MyController) webContext.getBean("showController");
-		} else {
-			controller = (MyController) webContext.getBean("defaultController");
-		}
-		return controller;
 	}
 
 	@Override

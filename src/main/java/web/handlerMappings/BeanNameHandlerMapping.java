@@ -1,11 +1,12 @@
-package shorter.util;
+package web.handlerMappings;
 
 import javax.servlet.http.HttpServletRequest;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
-import web.HandlerMappings.HandlerMapping;
+import org.springframework.context.annotation.Configuration;
 import web.MyController;
 
+@Configuration
 public class BeanNameHandlerMapping extends HandlerMapping {
 
 	public BeanNameHandlerMapping() {
