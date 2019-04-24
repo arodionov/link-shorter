@@ -29,7 +29,7 @@ public class DefaultShortenLinkService implements ShortenLinkService {
     @Override
     @Benchmark
     public Link shortLink(Link fullLink) {
-        System.out.println("in shortLink");
+        System.out.println("in shortLink . fullLink = " + fullLink.getPath());
         String fullPath = fullLink.getPath();
         String shortPath = shorterService.shorten(fullPath);
         shortLinksRepo.put(shortPath, fullPath);

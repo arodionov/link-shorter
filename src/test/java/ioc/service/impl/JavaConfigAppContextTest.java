@@ -106,28 +106,4 @@ public class JavaConfigAppContextTest {
     public void hw() {
 
     }
-
-    @Ignore
-    @Test
-    public void test1() {
-        int func = func(0);
-        System.out.println(func);
-    }
-
-    private int func(int i) {
-        i++;
-        while (i < 20) {
-            i = func(i);
-        }
-        return i * 2;
-    }
-
-    @Test
-    public void test() {
-        Map<String, Class<?>> config = of(
-                "shorterService", IdentShorterService.class);
-        BeanFactory context = new JavaConfigAppContext(config);
-
-        ShorterService shorterService = context.getBean("shorterService");
-    }
 }
