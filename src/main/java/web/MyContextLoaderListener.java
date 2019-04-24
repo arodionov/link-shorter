@@ -19,7 +19,6 @@ public class MyContextLoaderListener implements
 		sce.getServletContext().setAttribute("root-config", rootConfig);
 
 		sce.getServletContext().setAttribute("handler-mapping", new BeanNameHandlerMapping());
-
 	}
 
 	@Override
