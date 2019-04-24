@@ -33,7 +33,6 @@ public class ShorterController implements MyController, BeanNameAware {
             writer.flush();
         }
     }
-
     @Override
     public void setBeanName(String s) {
         this.beanName = s;

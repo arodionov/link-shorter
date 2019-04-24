@@ -27,8 +27,9 @@ public class WebConfig {
 
 	//req examp: http://localhost:8080/shorter/full?short=http://asdsa.sh
 	@Bean
-	public MyController full(){
-		return new FullController();
+	@Autowired
+	public MyController full(ShortenLinkService shortenLinkService){
+		return new FullController(shortenLinkService);
 	}
 
 	//TODO: create ShorterController bean to make short link from full
