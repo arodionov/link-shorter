@@ -1,13 +1,16 @@
 package ioc.service.impl;
 
 import ioc.service.BeanFactory;
+import org.junit.Ignore;
 import org.junit.Test;
+import shorter.model.Link;
 import shorter.repository.impl.InMemShortLinksRepo;
 import shorter.service.ShortenLinkService;
 import shorter.service.ShorterService;
 import shorter.service.impl.DefaultShortenLinkService;
 import shorter.service.impl.IdentShorterService;
 import shorter.service.test.FirstTestForCycleDepsService;
+import shorter.service.test.SecondTestForCycleDepsService;
 import util.BeanDefinition;
 import util.exception.CycleDependencyException;
 
@@ -35,7 +38,7 @@ public class JavaConfigAppContextTest {
 
     @Test
     public void BDisNotEmptyForContext() {
-        Map<String, Class<?>> config = of("String", String.class);
+        Map<String, Class<?>> config = of("test", IdentShorterService.class);
         BeanFactory context = new JavaConfigAppContext(config);
 
         BeanDefinition[] names = context.getBeanDefinitionNames();
@@ -74,17 +77,12 @@ public class JavaConfigAppContextTest {
         assertSame(shorterService, shorterService1);
     }
 
-    @Test
+    @Test(expected = CycleDependencyException.class)
     public void getBeanWithCycleDependencies() {
-        Map<String, Class<?>> config = of("test", FirstTestForCycleDepsService.class);
+        Map<String, Class<?>> config = of(
+                "firstTestForCycleDepsService", FirstTestForCycleDepsService.class,
+                "secondTestForCycleDepsService", SecondTestForCycleDepsService.class);
         BeanFactory context = new JavaConfigAppContext(config);
-        try {
-            context.getBean("test");
-        } catch (Exception e) {
-            String message = e.getMessage();
-            assertEquals("There are cycle dependencies in your configuration.", message);
-            assertEquals(CycleDependencyException.class, e.getClass());
-        }
     }
 
     @Test
@@ -92,12 +90,12 @@ public class JavaConfigAppContextTest {
         Map<String, Class<?>> config = of(
                 "default", DefaultShortenLinkService.class,
                 "linksRepo", InMemShortLinksRepo.class,
-                "shorterService", IdentShorterService.class,
-                "test", IdentShorterService.class);
+                "shorterService", IdentShorterService.class);
         BeanFactory context = new JavaConfigAppContext(config);
 
         ShortenLinkService def = context.getBean("default");
-//        def.fullLink(Link.linkTo("test"));
+        System.out.println(def);
+        def.shortLink(Link.linkTo("test"));
     }
 
     /**
@@ -107,5 +105,29 @@ public class JavaConfigAppContextTest {
      */
     public void hw() {
 
+    }
+
+    @Ignore
+    @Test
+    public void test1() {
+        int func = func(0);
+        System.out.println(func);
+    }
+
+    private int func(int i) {
+        i++;
+        while (i < 20) {
+            i = func(i);
+        }
+        return i * 2;
+    }
+
+    @Test
+    public void test() {
+        Map<String, Class<?>> config = of(
+                "shorterService", IdentShorterService.class);
+        BeanFactory context = new JavaConfigAppContext(config);
+
+        ShorterService shorterService = context.getBean("shorterService");
     }
 }

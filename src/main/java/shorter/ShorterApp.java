@@ -4,15 +4,14 @@ import ioc.service.BeanFactory;
 import ioc.service.impl.JavaConfigAppContext;
 import shorter.model.Link;
 import shorter.repository.impl.InMemShortLinksRepo;
-import shorter.service.impl.DefaultShortenLinkService;
-import shorter.service.test.FirstTestForCycleDepsService;
-import shorter.service.impl.IdentShorterService;
 import shorter.service.ShortenLinkService;
+import shorter.service.impl.DefaultShortenLinkService;
+import shorter.service.impl.IdentShorterService;
 
 import java.util.Map;
 import java.util.Optional;
 
-import static java.util.Map.*;
+import static java.util.Map.of;
 import static shorter.model.Link.linkTo;
 
 @SuppressWarnings("all")

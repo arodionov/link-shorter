@@ -1,12 +1,11 @@
 package shorter.service.impl;
 
-import util.annotation.Benchmark;
-import util.annotation.PostConstructBean;
 import shorter.model.Link;
 import shorter.repository.ShortLinksRepo;
-import shorter.repository.impl.InMemShortLinksRepo;
 import shorter.service.ShortenLinkService;
 import shorter.service.ShorterService;
+import util.annotation.Benchmark;
+import util.annotation.PostConstructBean;
 
 import java.util.Optional;
 

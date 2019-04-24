@@ -1,38 +1,41 @@
 package ioc.service.impl;
 
 import ioc.service.BeanFactory;
-import lombok.Builder;
+import lombok.Getter;
+import lombok.SneakyThrows;
+import shorter.service.ShortenLinkService;
 import util.BeanDefinition;
+import util.annotation.Benchmark;
 import util.annotation.PostConstructBean;
 import util.exception.BeanNotFoundException;
 import util.exception.CycleDependencyException;
-import util.proxy.BeanProxy;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Method;
-import java.lang.reflect.Proxy;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.lang.reflect.*;
+import java.util.*;
+import java.util.function.Function;
 
+import static java.lang.Class.*;
+import static java.lang.System.nanoTime;
+import static java.lang.System.out;
 import static java.util.Arrays.asList;
+import static java.util.Arrays.stream;
 import static java.util.Collections.emptyMap;
-import static java.util.Objects.isNull;
+import static java.util.Objects.requireNonNull;
 import static java.util.Optional.ofNullable;
-import static java.util.function.Function.identity;
+import static java.util.function.Function.*;
 import static java.util.stream.Collectors.toMap;
 
 @SuppressWarnings("all")
 public class JavaConfigAppContext implements BeanFactory {
 
     private Map<String, BeanDefinition> beanDefinitions;
-    private Map<String, Object> context = new HashMap<>();
+    private Map<String, Bean> context = new HashMap<>();
     private Map<String, String> invocations = new HashMap<>();
 
     public JavaConfigAppContext(Map<String, Class<?>> beanDefinitions) {
         this.beanDefinitions = beanDefinitions.entrySet().stream()
-                .collect(toMap(entry -> entry.getKey(),
-                        entry -> new BeanDefinition(entry.getKey(), entry.getValue())));
+                .collect(toMap(entry -> entry.getKey(), entry -> new BeanDefinition(entry.getKey(), entry.getValue())));
+        initializeContext();
     }
 
     public JavaConfigAppContext() {
@@ -41,68 +44,12 @@ public class JavaConfigAppContext implements BeanFactory {
 
     @Override
     public <T> T getBean(String beanName) {
-
-        checkIfBeanHasInitMetodOrElseThrowException(beanName);
-
-        return (T) ofNullable(getBeanFromContext(beanName)).map(identity()).orElseGet(() -> {
-
-            Class<?> beanClass = ofNullable(this.beanDefinitions.get(beanName))
-                    .map(bean -> bean.getBeanClass()).orElse(null);
-
-            Object bean = initBean(beanClass, beanName);
-
-            invokeInitMethod(bean);
-            checkPostConstructAnnotationAndInvoke(bean);
-
-            return bean;
-//                    getProxyMethodWithBenchmarkAnnotation(bean, beanName);
-        });
-    }
-
-    private Object getProxyMethodWithBenchmarkAnnotation(Object bean, String beanName) {
-        Class<?> aClass = bean.getClass();
-        BeanProxy beanProxy = new BeanProxy(aClass);
-        Object proxy = Proxy.newProxyInstance(aClass.getClassLoader(), aClass.getInterfaces(), beanProxy);
-        this.context.put(beanName, proxy);
-        return proxy;
-    }
-
-    private void checkPostConstructAnnotationAndInvoke(Object bean) {
-        for (Method method : bean.getClass().getMethods()) {
-            if (method.isAnnotationPresent(PostConstructBean.class)) {
-                try {
-                    method.invoke(bean);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-    }
-
-    private void invokeInitMethod(Object bean) {
-        try {
-            bean.getClass().getMethod("init").invoke(bean);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void checkIfBeanHasInitMetodOrElseThrowException(String beanName) {
-        String methodName = "init";
-        boolean isPresent = false;
-        Optional<BeanDefinition> aClass = ofNullable(this.beanDefinitions.get(beanName));
-        if (aClass.isPresent()) {
-            for (Method method : aClass.get().getBeanClass().getMethods()) {
-                if (method.getName().equals(methodName)) {
-                    isPresent = true;
-                }
-            }
-        } else {
-            throw new BeanNotFoundException("No bean with name '" + beanName + "' found");
-        }
-        if (!isPresent) {
-            throw new RuntimeException("No method '" + methodName + "' present");
-        }
+        return (T) ofNullable(this.context.get(beanName)).map(bean -> {
+            bean.invokeInitMethod();
+            bean.invokePostConstructMethod();
+            bean.initProxy();
+            return bean.getProxyBean();
+        }).orElseThrow(() -> new BeanNotFoundException("Bean '" + beanName + "' is not found in context"));
     }
 
     @Override
@@ -117,60 +64,88 @@ public class JavaConfigAppContext implements BeanFactory {
                 .toArray(BeanDefinition[]::new);
     }
 
-    private <T> T initBean(Class<?> beanClass, String beanName) {
-
-        if (beanClass != null) {
-            try {
-                Object bean = null;
-                for (Constructor<?> constructor : beanClass.getConstructors()) {
-                    Class<?>[] parameterTypes = constructor.getParameterTypes();
-
-                    for (Class<?> paramType : parameterTypes) {
-
-                        String paramName = ofNullable(checkBeanPresenceInBeanDefinitionsAndReturnName(paramType))
-                                .orElseThrow(() -> new BeanNotFoundException(
-                                        "Bean of type '" + paramType + "' is not present in configuration"));
-
-                        if (!isBeanPresentInContext(paramType)) {
-
-                            validateInvocationsOrElseThrowCycleDepsException(paramType, beanName);
-
-                            try {
-                                Constructor<?> constructor1 = paramType.getConstructor();
-
-                                Object createdBean = paramType.getConstructor().newInstance();
-                                String name = getBeanNameFromContext(paramType).orElse(paramName);
-                                this.context.put(name, createdBean);
-
-                            } catch (NoSuchMethodException e) {
-                                initBean(paramType, paramName);
-                            }
-                        }
-                    }
-                    String clazzName = constructor.getName();
-
-                    if (!isBeanPresentInContext(clazzName)) {
-                        Object[] constructorParams = new Object[parameterTypes.length];
-                        for (int i = 0; i < parameterTypes.length; i++) {
-                            String beanNameAtContext = generateBeanName(parameterTypes[i]);
-                            constructorParams[i] = this.context.get(beanNameAtContext);
-                        }
-                        bean = constructor.newInstance(constructorParams);
-                        String name = getBeanNameFromContext(clazzName).orElse(generateBeanName(clazzName));
-                        this.context.put(name, bean);
-                    }
-                }
-                return (T) bean;
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-        return null;
+    private void initializeContext() {
+        this.beanDefinitions.entrySet().stream().map(Map.Entry::getValue)
+                .forEach(beanDefinition -> initBean(beanDefinition.getBeanClass(), beanDefinition.getBeanName()));
     }
 
-    private String generateBeanName(Class<?> clazz) {
-        String clazzName = clazz.getName();
-        return generateBeanName(clazzName);
+    private void initBean(Class<?> beanClass, String beanName) {
+        Constructor<?> constructor = findFirstConstructor(beanClass);
+
+        ofNullable(constructor.getParameterCount() == 0 ? null : 0).ifPresentOrElse(param -> {
+            stream(constructor.getParameters())
+                    .filter(parameter -> !isBeanAlreadyInContext(parameter.getType()))
+                    .map(Parameter::getType)
+                    .forEach(parameter -> {
+
+                        BeanDefinition beanDefinition = getNameFromBeanDefinitions(parameter);
+                        Class<?> clazz = beanDefinition.getBeanClass();
+                        Constructor<?> firstConstructor = findFirstConstructor(clazz);
+                        if (firstConstructor.getParameterCount() == 0) {
+
+                            createBeanAndPutToContext(clazz, beanDefinition.getBeanName());
+                        } else {
+                            validateInvocationsOrElseThrowCycleDepsException(clazz, beanDefinition.getBeanName());
+                            initBean(clazz, beanDefinition.getBeanName());
+                        }
+                    });
+            createBeanAndPutToContext(constructor, beanName);
+        }, () -> createBeanAndPutToContext(beanClass, beanName));
+    }
+
+    private BeanDefinition getNameFromBeanDefinitions(Class<?> clazz) {
+        return ofNullable(this.beanDefinitions.get(generateBeanName(clazz.getName())))
+                .map(identity()).orElseGet(() -> getBeanDefinitionByClass(clazz));
+    }
+
+    private BeanDefinition getBeanDefinitionByClass(Class<?> clazz) {
+        return this.beanDefinitions.entrySet().stream()
+                .filter(entry -> entry.getValue().getBeanClass()
+                        .equals(clazz) || asList(entry.getValue().getBeanClass().getInterfaces()).contains(clazz))
+                .map(entry -> entry.getValue())
+                .findAny()
+                .orElseThrow(() -> new BeanNotFoundException("No beans in config"));
+    }
+
+    private void createBeanAndPutToContext(Constructor<?> constructor, String beanName) {
+        try {
+            Object[] intiParams = stream(constructor.getParameterTypes())
+                    .map(initParam -> {
+                        return ofNullable(this.context.get(generateBeanName(initParam.getName())))
+                                .map(bean -> bean.getBeanObj())
+                                .orElseGet(() -> {
+                                    String name = getBeanDefinitionByClass(initParam).getBeanName();
+                                    return this.context.get(name).getBeanObj();
+                                });
+                    }).toArray();
+
+            Object beanObj = constructor.newInstance(intiParams);
+            Bean bean = new Bean(forName(constructor.getName()), beanName, beanObj);
+            this.context.put(beanName, bean);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void createBeanAndPutToContext(Class<?> clazz, String generatedBeanName) {
+        try {
+            Object beanOdj = clazz.getConstructor().newInstance();
+            Bean bean = new Bean(clazz, generatedBeanName, beanOdj);
+            this.context.put(generatedBeanName, bean);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private Constructor<?> findFirstConstructor(Class<?> beanClass) {
+        return stream(beanClass.getConstructors()).findAny()
+                .orElseThrow(() -> new BeanNotFoundException("No constructors present in '" + beanClass + "'"));
+    }
+
+    private boolean isBeanAlreadyInContext(Class<?> clazz) {
+        return this.context.entrySet().stream()
+                .filter(entry -> entry.getValue().getBeanClass().equals(clazz))
+                .findAny().isPresent() ? true : false;
     }
 
     private String generateBeanName(String clazzName) {
@@ -180,75 +155,66 @@ public class JavaConfigAppContext implements BeanFactory {
     }
 
     private void validateInvocationsOrElseThrowCycleDepsException(Class<?> clazz, String beanName) {
-        String key = generateBeanName(clazz);
+        String key = generateBeanName(clazz.getName());
         this.invocations.put(key, beanName);
 
-        for (Map.Entry<String, String> entry : this.invocations.entrySet()) {
-            String clazz1Name = entry.getKey();
-            String clazz2Name = entry.getValue();
-            if ((clazz1Name.equalsIgnoreCase(beanName)) && (clazz2Name.equalsIgnoreCase(key))) {
-                throw new CycleDependencyException(
-                        "There are cycle dependencies in your configuration. " + clazz1Name + " <--> " + clazz2Name);
-            }
-        }
-    }
-
-    private String checkBeanPresenceInBeanDefinitionsAndReturnName(Class<?> clazz) {
-        String beanName = generateBeanName(clazz);
-        return ofNullable(this.beanDefinitions.get(beanName)).map(bean -> {
-            return beanName;
-        }).orElseGet(() -> {
-            return this.beanDefinitions.entrySet().stream()
-                    .filter(entry -> entry.getValue().getBeanClass()
-                            .equals(clazz) || asList(entry.getValue().getBeanClass().getInterfaces()).contains(clazz))
-                    .map(entry -> entry.getValue().getBeanName())
-                    .findAny().orElse(null);
+        this.invocations.entrySet().stream()
+                .filter(entry -> entry.getKey().equalsIgnoreCase(beanName) && entry.getValue().equalsIgnoreCase(key))
+                .findAny().ifPresent(entry -> {
+            throw new CycleDependencyException("There are cycle dependencies in your configuration. ["
+                    + entry.getKey() + " <--> " + entry.getValue() + "]");
         });
     }
 
-    private boolean isBeanPresentInContext(Class<?> clazz) {
-        String beanName = generateBeanName(clazz);
-        Object bean = this.context.get(beanName);
-        return isNull(bean) ? false : true;
-    }
+    @Getter
+    private static class Bean {
 
-    private boolean isBeanPresentInContext(String clazzName) {
-        String beanName = generateBeanName(clazzName);
-        Object bean = this.context.get(beanName);
-        return isNull(bean) ? false : true;
-    }
-
-    private Object getBeanFromContext(String beanName) {
-        return this.context.get(beanName);
-    }
-
-    private Optional<String> getBeanNameFromContext(Class<?> clazz) {
-        return this.beanDefinitions.entrySet().stream()
-                .filter(entry -> entry.getValue().equals(clazz))
-                .map(Map.Entry::getKey)
-                .findAny();
-    }
-
-    private Optional<String> getBeanNameFromContext(String fullClassName) {
-        return this.beanDefinitions.entrySet().stream()
-                .filter(entry -> entry.getValue().getBeanClass().getName().equals(fullClassName))
-                .map(Map.Entry::getKey)
-                .findAny();
-    }
-
-    @Builder
-    private static class BeanMetaInfo {
         private Class<?> beanClass;
         private String beanName;
-        private Object bean;
+        private Object beanObj;
         private Object proxyBean;
 
+        public Bean(Class<?> beanClass, String beanName, Object beanObj) {
+            this.beanClass = beanClass;
+            this.beanName = beanName;
+            this.beanObj = beanObj;
+        }
+
+        private void invokeInitMethod() {
+            stream(this.beanClass.getMethods())
+                    .filter(method -> method.getName().equals("init"))
+                    .forEach(method -> invokeMethod(method, this.beanObj));
+        }
+
+        private void invokePostConstructMethod() {
+            stream(this.beanClass.getMethods())
+                    .filter(method -> method.isAnnotationPresent(PostConstructBean.class))
+                    .forEach(method -> invokeMethod(method, this.beanObj));
+        }
+
         public void initProxy() {
-            Class<?> aClass = bean.getClass();
-            BeanProxy beanProxy = new BeanProxy(aClass);
-            Object proxy = Proxy.newProxyInstance(aClass.getClassLoader(), aClass.getInterfaces(), beanProxy);
-//            context.put(beanName, proxy);
-            this.proxyBean = proxy;
+            this.proxyBean = Proxy.newProxyInstance(this.beanObj.getClass().getClassLoader(),
+                    this.beanObj.getClass().getInterfaces(),
+                    ((proxy, method, args) -> {
+                        Object res;
+                        if (method.isAnnotationPresent(Benchmark.class)) {
+                            double start = nanoTime();
+                            res = method.invoke(this.beanObj, args);
+                            double end = nanoTime();
+                            out.println(method + " - execution time is " + (end - start) + " ns");
+                        } else {
+                            res = method.invoke(this.beanObj, args);
+                        }
+                        return res;
+                    }));
+        }
+
+        private void invokeMethod(Method method, Object object) {
+            try {
+                method.invoke(this.beanObj);
+            } catch (Exception e) {
+                throw new RuntimeException("Something went wrong");
+            }
         }
     }
 }
