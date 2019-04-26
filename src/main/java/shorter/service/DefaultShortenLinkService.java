@@ -2,7 +2,7 @@ package shorter.service;
 
 import java.util.Optional;
 
-import ioc.Benchmark;
+import ioc.PostConstructBean;
 import shorter.model.Link;
 import shorter.repo.ShortLinksRepo;
 
@@ -13,13 +13,18 @@ public class DefaultShortenLinkService implements ShortenLinkService {
 	private final ShortLinksRepo shortLinksRepo;
 	private final ShorterService shorterService;
 
+	@PostConstructBean
+	public void init() {
+		System.out.println("init() method after DefaultShortenLinkService constructor");
+	}
+
 	public DefaultShortenLinkService(ShortLinksRepo repo, ShorterService service) {
 		shortLinksRepo = repo;
 		shorterService = service;
 	}
 
 	@Override
-	@Benchmark
+	//@Benchmnark
 	public Link shortLink(Link fullLink) {
 		String fullPath = fullLink.getPath();
 		String shortPath = shorterService.shorten(fullPath);

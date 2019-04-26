@@ -3,192 +3,171 @@ package ioc;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
 import java.lang.reflect.Proxy;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class JavaConfAppContext implements BeanFactory {
 
-    private Map<String, Class<?>> config;
-    private Map<String, Object> beans = new HashMap<>();
+	private Map<String, BeanDefinition> beanDefinitions;
+	private Map<String, Object> beans = new HashMap<>();
 
-    public JavaConfAppContext(Map<String, Class<?>> config) {
-        this.config = config;
-    }
+	public JavaConfAppContext(Map<String, Class<?>> config) {
+		beanDefinitions = config.entrySet().stream()
+		                        .map(entry -> new BeanDefinition(entry.getKey(), entry.getValue()))
+		                        .collect(Collectors.toMap(
+		                        		BeanDefinition::getBeanName,
+				                        Function.identity())
+		                        );
 
-    public JavaConfAppContext() {
-        this.config = Collections.emptyMap();
-    }
+	}
 
-    @Override
-    public <T> T getBean(String beanName) {
+	public JavaConfAppContext() {
+		this.beanDefinitions = Collections.emptyMap();
+	}
 
-        Object bean = beans.get(beanName);
-        if (bean != null) return (T) bean;
+	@Override
+	public <T> T getBean(String beanName) {
+		try {
+			return (T) getBean0(beanName);
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+	}
 
-        Class<?> beanClass = config.get(beanName);
-        if (beanClass != null) {
-            try {
-                return (T) initNewBean(beanClass);
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        }
-        return null;
-    }
+	private Object getBean0(String beanName) throws Exception {
 
-    @Override
-    public BeanDefinition getBeanDefinition(String beanName) {
-        return config.containsKey(beanName) ? new BeanDefinition(beanName) : null;
-    }
+		Object bean = beans.get(beanName);
+		if (bean != null) {
+			return bean;
+		}
 
-    @Override
-    public BeanDefinition[] getBeanDefinitionNames() {
-        return config.entrySet().stream()
-                .map(entry -> new BeanDefinition(entry.getKey()))
-                .toArray(BeanDefinition[]::new);
-    }
+		Class<?> type = getBeanType(beanName);
+		if (type == null) {
+			throw new RuntimeException("Bean not found");
+		}
 
-    private Object initNewBean(Class<?> beanClass) {
-        Class<?>[] arguments = constructorArguments(beanClass);
-        Object[] initargs = matchedBeansFromContext(arguments);
-        try {
-            Constructor<?> constructor = beanClass.getDeclaredConstructor(arguments);
-            Object bean = constructor.newInstance(initargs);
-            String beanName = beanNameFromClass(beanClass);
-            beans.put(beanName, bean);
-            checkInitMethod(beanClass);
-            checkPostConstructBeanAnnotation(beanClass);
-            wrapWithProxy(beanClass);
-            return beans.get(beanName);
-        } catch (Exception e) {
-            throw new RuntimeException("Exception occurred during bean instantiation");
-        }
-    }
+		BeanBuilder builder = new BeanBuilder(type);
+		builder.createBean();
+		builder.createBeanBenchmarkProxy();
+		builder.callPostConstructBeanMethod();
+		builder.callInitMethod();
+		bean = builder.build();
 
-    private void checkRequiredArguments(Class<?> beanClass) {
-        Class[] arguments = constructorArguments(beanClass);
-        if (arguments.length == 0) {
-            initNewBean(beanClass);
-        } else {
-            for (Class<?> argument : arguments) {
-                String beanName = beanNameFromClass(argument);
-                Object bean = beans.get(beanName);
-                if (bean == null) {
-                    initNewBean(argument);
-                }
-            }
-        }
-    }
+		beans.put(beanName, bean);
+		return bean;
+	}
 
-    private Object[] matchedBeansFromContext(Class<?>[] constructorArguments) {
-        Object[] injectionBeans = new Object[constructorArguments.length];
-        for (int i = 0; i < constructorArguments.length; i++) {
-            Class<?> argument = constructorArguments[i];
-            String beanName = beanNameFromClass(argument);
-            Class<?> concreteClass = config.get(beanName);
-            checkRequiredArguments(concreteClass);
-            injectionBeans[i] = beans.get(beanName);
-        }
-        return injectionBeans;
-    }
+	private Class<?> getBeanType(String beanName) {
+		return beanDefinitions.get(beanName).getBeanClass();
+	}
 
-    private void wrapWithProxy(Class<?> beanClass) {
-        String beanName = beanNameFromClass(beanClass);
-        Object bean = beans.get(beanName);
-        ClassLoader classLoader = bean.getClass().getClassLoader();
-        Class<?>[] interfaces = bean.getClass().getInterfaces();
-        List<String> annotatedMethodNames = benchmarkAnnotatedMethodNames(bean);
-        if (!annotatedMethodNames.isEmpty()) {
-            bean = Proxy.newProxyInstance(classLoader, interfaces, new BeanBenchmarkInvocationHandler(bean, annotatedMethodNames));
-        }
-        beans.put(beanName, bean);
-    }
+	@Override
+	public BeanDefinition getBeanDefinition(String beanName) {
+		return beanDefinitions.get(beanName);
+	}
 
-    private List<String> benchmarkAnnotatedMethodNames(Object bean) {
-        Method[] methods = bean.getClass().getMethods();
-        return Stream.of(methods)
-                .filter(method -> method.isAnnotationPresent(Benchmark.class))
-                .map(Method::getName)
-                .collect(Collectors.toList());
-    }
+	@Override
+	public BeanDefinition[] getBeanDefinitionNames() {
+		return beanDefinitions.values().toArray(new BeanDefinition[0]);
+	}
 
-    private void checkInitMethod(Class<?> beanClass) {
-        try {
-            Method initMethod = beanClass.getMethod("init");
-            if (initMethod != null) {
-                String beanName = beanNameFromClass(beanClass);
-                Object o = beans.get(beanName);
-                initMethod.invoke(o);
-            }
-        } catch (Exception e) {
-            //¯\_(ツ)_/¯
-        }
-    }
+	class BeanBuilder {
+		private final Class<?> beanType;
+		private Object bean;
+		private Object proxyBean;
 
-    private void checkPostConstructBeanAnnotation(Class<?> beanClass) {
-        Method[] declaredMethods = beanClass.getDeclaredMethods();
-        for (Method declaredMethod : declaredMethods) {
-            if (declaredMethod.isAnnotationPresent(PostConstructBean.class)) {
-                String beanName = beanNameFromClass(beanClass);
-                Object o = beans.get(beanName);
-                try {
-                    declaredMethod.invoke(o);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-    }
+		public BeanBuilder(Class<?> beanType) {
+			this.beanType = beanType;
+		}
 
-    private Class[] constructorArguments(Class<?> beanClass) {
-        Constructor<?>[] constructors = beanClass.getDeclaredConstructors();
-        if (constructors.length > 1) {
-            String message = "There must be only one constructor to instantiate " + beanClass.getSimpleName();
-            throw new RuntimeException(message);
-        }
-        Constructor<?> constructor = constructors[0];
-        return constructor.getParameterTypes();
-    }
+		public void createBean() throws Exception {
+			bean = hasConstructorWithParams() ?
+					newInstanceWithParameters() :
+					newInstanceWithoutParams();
+		}
 
-    private String beanNameFromClass(Class<?> beanClass) {
-        Class<?>[] interfaces = beanClass.getInterfaces();
-        String simpleName = beanClass.getSimpleName();
-        if (interfaces.length != 0) {
-            simpleName = interfaces[0].getSimpleName(); // to simplify implementation
-        }
-        return simpleName.substring(0, 1).toLowerCase() + simpleName.substring(1);
-    }
+		private boolean hasConstructorWithParams() {
+			Constructor<?> constructor = beanType.getConstructors()[0];
+			return constructor.getParameterCount() > 0;
+		}
 
-    private class BeanBenchmarkInvocationHandler implements InvocationHandler {
-        private Object originalBean;
-        private List<String> annotatedMethods;
+		private Object newInstanceWithoutParams() throws InstantiationException, IllegalAccessException {
+			return beanType.newInstance();
+		}
 
-        BeanBenchmarkInvocationHandler(Object originalBean, List<String> annotatedMethodNames) {
-            this.originalBean = originalBean;
-            this.annotatedMethods = annotatedMethodNames;
-        }
+		private Object newInstanceWithParameters() throws Exception {
+			Constructor<?> constructor = beanType.getConstructors()[0];
+			Parameter[] parameters = constructor.getParameters();
+			Object[] paramsVal = constructorParams(parameters);
+			return constructor.newInstance(paramsVal);
+		}
 
-        @Override
-        public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-            if (annotatedMethods.contains(method.getName())) {
-                long nanosBefore = System.nanoTime();
-                Object resultProxy = method.invoke(originalBean, args);
-                long nanosAfter = System.nanoTime();
-                String message = String.format(
-                        "Execution time of %s.%s is %d",
-                        originalBean.getClass().getSimpleName(),
-                        method.getName(),
-                        nanosAfter - nanosBefore
-                );
-                System.err.println(message);
-                return resultProxy;
-            }
-            return originalBean;
-        }
-    }
+		private Object[] constructorParams(Parameter[] parameters) {
+			Object[] paramsVal = new Object[parameters.length];
+
+			for (int i = 0; i < parameters.length; i++) {
+				Class<?> paramType = parameters[i].getType();
+				String beanName = getBeanNameByType(paramType);
+				paramsVal[i] = getBean(beanName);
+			}
+			return paramsVal;
+		}
+
+		private String getBeanNameByType(Class<?> paramType) {
+			String paramTypeName = paramType.getSimpleName();
+			String localBeanName
+					= firstCharToLowerCase(paramTypeName);
+			return localBeanName;
+		}
+
+		private String firstCharToLowerCase(String paramTypeName) {
+			return Character.toLowerCase(paramTypeName.charAt(0)) + paramTypeName.substring(1);
+		}
+
+		public void callInitMethod() throws Exception {
+			Method method;
+			try {
+				method = beanType.getMethod("init");
+			} catch (NoSuchMethodException ex) {
+				return;
+			}
+			method.invoke(bean);
+		}
+
+		public void callPostConstructBeanMethod() throws Exception{
+			Method[] methods = beanType.getMethods();
+			for (Method m : methods) {
+				if (m.isAnnotationPresent(PostConstructBean.class)) {
+					m.invoke(bean);
+				}
+			}
+		}
+
+		public void createBeanBenchmarkProxy() {
+
+			proxyBean = Proxy.newProxyInstance(
+					beanType.getClassLoader(),
+					beanType.getInterfaces(),
+					new InvocationHandler() {
+						@Override
+						public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+							double start = System.nanoTime();
+							Object res = method.invoke(bean, args);
+							double end = System.nanoTime();
+							System.out.println(method + ": " + (end - start));
+							return res;
+						};
+					});
+
+		}
+
+		public Object build() {
+			return proxyBean == null ? bean : proxyBean;
+		}
+	}
 }

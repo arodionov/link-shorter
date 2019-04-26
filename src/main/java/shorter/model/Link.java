@@ -12,7 +12,7 @@ public class Link {
 		return new Link("http://" + path);
 	}
 
-	private Link(String link) {
+	public Link(String link) {
 		check(link);
 		this.link = link;
 	}

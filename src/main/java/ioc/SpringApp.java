@@ -9,6 +9,7 @@ import shorter.service.IdentShorterService;
 import shorter.service.ShorterService;
 
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.support.ClassPathXmlApplicationContext;
 
 public class SpringApp {
 
@@ -20,8 +21,6 @@ public class SpringApp {
 			put("linksRepo", InMemShortLinksRepo.class);
 		}};
 		BeanFactory context = new JavaConfAppContext(config);
-		ShorterService service = context.getBean("shorterService");
-		ShortLinksRepo repo = context.getBean("linksRepo");
 
 
 //			AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
