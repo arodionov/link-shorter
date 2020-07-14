@@ -1,4 +1,4 @@
-package shorter.repo;
+package shorter.repository;
 
 import java.util.Optional;
 
